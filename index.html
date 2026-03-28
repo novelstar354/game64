@@ -431,8 +431,14 @@ document.getElementById("applyBtn").onclick = ()=>{
   const list = Array.from(inputs).map(i=>i.value || "🍏");
 
   generateFruits(list);
-  fullReset(); // ゲームリセットして反映
 
+  // ★ 保存
+  localStorage.setItem("fruitList", JSON.stringify(list));
+
+  // UI更新
+  current = 0;
+  next = 1;
+  updateUI();
 };
 const editor = document.getElementById("fruitEditor");
 
@@ -532,9 +538,11 @@ function fullReset(){
  updateUI();
     suikaCount=0;
 
- localStorage.removeItem(SAVE_KEY);
+localStorage.removeItem(SAVE_KEY);
 }
-
+document.getElementById("fruitCount").onchange = (e)=>{
+  buildEditor(parseInt(e.target.value));
+};
 function save(){
  const data=engine.world.bodies
   .filter(b=>b.fruitType!==undefined)
@@ -747,8 +755,24 @@ function flash(){
  setTimeout(()=>canvas.style.boxShadow="",120);
 }
 document.getElementById("resetBtn").onclick=fullReset;
-buildEditor(10);
-generateFruits(["🍒","🍓","🍇","🍊","🍎","🍐","🍑","🍍","🍈","🍉"]);
+const savedList = JSON.parse(localStorage.getItem("fruitList") || "null");
+
+if(savedList){
+  buildEditor(savedList.length);
+
+  // 入力欄にも反映
+  const inputs = editor.querySelectorAll("input");
+  savedList.forEach((e,i)=>{
+    if(inputs[i]) inputs[i].value = e;
+  });
+
+  generateFruits(savedList);
+}else{
+  buildEditor(10);
+  generateFruits(["🍒","🍓","🍇","🍊","🍎","🍐","🍑","🍍","🍈","🍉"]);
+}
+
+load();
 load();
 </script>
 </body>
