@@ -1,0 +1,755 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<title>フルーツゲーム change Neon</title>
+<meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no">
+<link rel="icon" href="https://tsukatte.com/wp-content/uploads/2019/01/watermelon-cut-big.png" sizes="16×16" type="image/png" /> 
+<script src="https://cdn.jsdelivr.net/npm/matter-js@0.19.0/build/matter.min.js"></script>
+
+<style>
+body{
+ margin:0;
+ display:flex;
+ justify-content:center;
+ align-items:center;
+ min-height:100svh;
+ background:
+ radial-gradient(circle at 20% 20%, #0ea5e9 0%, transparent 40%),
+ radial-gradient(circle at 80% 80%, #9333ea 0%, transparent 40%),
+ #020617;
+ font-family:system-ui;
+ overflow:hidden;
+ color:#e0f2fe;
+}
+
+/* 枠（ガラス＋ネオン） */
+#wrap{
+ background:rgba(0,255,255,0.06);
+ padding:12px;
+ border-radius:18px;
+ position:relative;
+ transform-origin:top center;
+
+ border:1px solid rgba(0,255,255,0.5);
+
+ backdrop-filter: blur(6px);
+
+ box-shadow:
+  0 0 20px rgba(0,255,255,0.6),
+  inset 0 0 20px rgba(0,255,255,0.2);
+
+ overflow:hidden;
+}
+#wrap::after{
+ content:"";
+ position:absolute;
+ inset:0;
+ pointer-events:none;
+
+ background:
+  repeating-linear-gradient(
+    to bottom,
+    rgba(0,255,255,0.06) 0px,
+    rgba(0,255,255,0.06) 1px,
+    transparent 2px,
+    transparent 6px
+  );
+
+ mix-blend-mode:screen;
+ animation:scanMove 4s linear infinite;
+}
+
+@keyframes scanMove{
+ from{transform:translateY(0);}
+ to{transform:translateY(20px);}
+}
+#wrap::before{
+ content:"";
+ position:absolute;
+ inset:-2px;
+ border-radius:18px;
+ pointer-events:none;
+
+ background:linear-gradient(120deg,
+  transparent,
+  rgba(0,255,255,0.6),
+  transparent);
+
+ opacity:0.4;
+ filter:blur(4px);
+}
+/* UI */
+#ui{
+ display:flex;
+ justify-content:space-between;
+ align-items:center;
+ margin-bottom:8px;
+ font-weight:bold;
+ font-size:14px;
+ text-shadow:0 0 8px #38bdf8;
+}
+#ui, .badge, .hint{
+ color:#67e8f9;
+ text-shadow:
+  0 0 6px #22d3ee,
+  0 0 12px #0ea5e9,
+  0 0 20px rgba(0,255,255,0.6);
+}
+/* バッジ */
+.badge{
+ background:rgba(2,6,23,0.8);
+ padding:4px 10px;
+ border-radius:999px;
+ border:1px solid #22d3ee;
+ box-shadow:
+  0 0 10px #22d3ee,
+  inset 0 0 12px rgba(34,211,238,0.4);
+}
+
+/* ボタン（ネオン） */
+#resetBtn,#restartBtn,#applyBtn{
+ background:rgba(0,255,255,0.08);
+ border:1px solid rgba(0,255,255,0.6);
+ color:#67e8f9;
+
+ box-shadow:
+  0 0 10px rgba(0,255,255,0.6),
+  inset 0 0 10px rgba(0,255,255,0.2);
+
+ backdrop-filter: blur(4px);
+}
+
+#resetBtn:hover,#restartBtn:hover,#applyBtn:hover{
+ background:rgba(0,255,255,0.15);
+ box-shadow:
+  0 0 20px rgba(0,255,255,1),
+  inset 0 0 15px rgba(0,255,255,0.4);
+}
+#resetBtn:hover,#restartBtn:hover,#applyBtn:hover{
+ transform:scale(1.08);
+ box-shadow:0 0 25px #67e8f9,0 0 50px #a855f7;
+}
+
+/* キャンバス（中も暗く） */
+canvas{
+ background:
+  radial-gradient(circle at 50% 50%, rgba(0,255,255,0.08), transparent 70%),
+  #020617;
+
+ box-shadow:
+  0 0 20px rgba(0,255,255,0.5),
+  inset 0 0 30px rgba(0,255,255,0.15);
+
+ position:relative;
+    z-index:1;
+}
+
+/* ガイド線（レーザー） */
+#guide{
+ position:absolute;
+ top:58px;
+ width:3px;
+ height:460px;
+ z-index:999;
+ pointer-events:none;
+
+ overflow:hidden; /* ← 追加 */
+
+ background:linear-gradient(
+  to bottom,
+  transparent,
+  #22d3ee,
+  #ffffff,
+  #a855f7,
+  #22d3ee,
+  transparent
+ );
+
+ box-shadow:
+  0 0 8px #22d3ee,
+  0 0 20px #22d3ee,
+  0 0 40px #9333ea;
+}
+
+/* グローを内側に収める */
+#guide::after{
+ content:"";
+ position:absolute;
+ top:0;
+ left:0;        /* ← 修正 */
+ width:100%;    /* ← 修正 */
+ height:100%;
+
+ background:linear-gradient(
+  to right,
+  rgba(34,211,238,0.4),
+  rgba(168,85,247,0.4)
+ );
+
+ filter:blur(4px); /* ← 少し弱める */
+}
+
+/* 上から流れる */
+@keyframes laserFlow{
+ 0%{ transform:translateY(-120%); }
+ 100%{ transform:translateY(120%); }
+}
+
+/* 発光の強弱 */
+@keyframes laserPulse{
+ 0%{ opacity:0.5; }
+ 50%{ opacity:1; }
+ 100%{ opacity:0.5; }
+}
+
+/* 流れる光 */
+@keyframes laserFlow{
+ 0%{ transform:translateY(-100%); }
+ 100%{ transform:translateY(100%); }
+}
+
+/* 発光の強弱 */
+@keyframes laserPulse{
+ 0%{ opacity:0.4; }
+ 50%{ opacity:1; }
+ 100%{ opacity:0.4; }
+}
+
+@keyframes pulse{
+ 0%{opacity:0.5;}
+ 50%{opacity:1;}
+ 100%{opacity:0.5;}
+}
+#wrap{
+ position:relative; /* ← 追加（すでにあるけど念のため） */
+}
+/* GAME OVER */
+.over{
+ position:absolute;
+ inset:0;
+ display:flex;
+ flex-direction:column;
+ align-items:center;
+ justify-content:center;
+ gap:16px;
+ font-size:34px;
+ font-weight:bold;
+ background:rgba(2,6,23,0.9);
+ color:#67e8f9;
+ text-shadow:
+  0 0 10px #22d3ee,
+  0 0 40px #9333ea;
+}
+
+/* ヒント */
+.hint{
+ text-align:center;
+ font-size:11px;
+ color:#38bdf8;
+ margin-top:6px;
+ text-shadow:0 0 8px #0ea5e9;
+}
+
+/* 入力 */
+input{
+ background:#020617;
+ color:#67e8f9;
+ border:1px solid #22d3ee;
+ border-radius:6px;
+ padding:2px;
+ text-align:center;
+ box-shadow:0 0 8px #0ea5e9 inset;
+}
+
+/* スコア発光 */
+#score,#high,#suikaCount{
+ color:#22d3ee;
+ text-shadow:
+  0 0 10px #0ea5e9,
+  0 0 20px #9333ea;
+}
+
+/* ネオンアニメーション */
+@keyframes pulseGlow{
+ 0%{ box-shadow:0 0 10px #22d3ee; }
+ 50%{ box-shadow:0 0 25px #9333ea; }
+ 100%{ box-shadow:0 0 10px #22d3ee; }
+}
+/*canvas{
+ animation:pulseGlow 2.5s infinite;
+}*/
+@keyframes glitch{
+ 0%{opacity:1;}
+ 92%{opacity:1;}
+ 93%{opacity:0.3;}
+ 94%{opacity:1;}
+ 96%{opacity:0.5;}
+ 100%{opacity:1;}
+}
+
+#wrap{
+ /*animation:glitch 4s infinite;*/
+    animation:none;
+}
+#wrap{
+ transform-style:preserve-3d;
+ perspective:800px;
+    overflow:hidden;
+}
+#guideWrap{
+ position:absolute;
+ top:58px;
+ left:0;
+ width:360px;
+ height:460px;
+ pointer-events:none;
+ z-index:999;
+}
+
+.laser{
+ position:absolute;
+ width:3px;
+ height:100%;
+ transform-origin:top;
+ background:linear-gradient(to bottom,#22d3ee,#fff,#a855f7);
+ box-shadow:
+  0 0 10px #22d3ee,
+  0 0 25px #9333ea;
+}
+</style>
+</head>
+<body>
+
+<div id="wrap">
+ <div id="ui">
+     <div style="margin:6px 0; font-size:12px;">
+  種類数:
+  <input id="fruitCount" type="number" min="3" max="15" value="10" style="width:50px;">
+  <button id="applyBtn">適用</button>
+</div>
+
+<div id="fruitEditor" style="display:flex; flex-wrap:wrap; gap:4px;"></div>
+  <div>
+   Score: <span id="score">0</span><br>
+   High: <span id="high">0</span><br>
+   Suika: <span id="suikaCount">0</span>
+  </div>
+  <div id="right">
+   <div class="badge">🎮 <span id="current">🍒</span></div>
+   <div class="badge">➡ <span id="next">🍓</span></div>
+   <button id="resetBtn">🔄</button>
+  </div>
+ </div>
+
+ <div id="guideWrap"></div>
+ <canvas id="world" width="360" height="520"></canvas>
+ <div class="hint">← → / A D / Space / Enter / R<br>
+ シンカの線：🍒→🍓→🍇→🍊→🍎→🍐→🍑→🍍→🍈→🍉
+</div>
+
+<div id="over" class="over" style="display:none">
+  <div>GAME OVER</div>
+  <button id="restartBtn">RESTART</button>
+</div>
+
+</div>
+
+<script>
+let suikaCount = 0; // スイカ専用カウンター
+const suikaEl = document.getElementById("suikaCount");
+const {Engine,Render,Runner,Bodies,World,Events,Sleeping}=Matter;
+const SAVE_KEY="suika1";
+
+const canvas=document.getElementById("world");
+const wrap=document.getElementById("wrap");
+const guide=document.getElementById("guide");
+const scoreEl=document.getElementById("score");
+const highEl=document.getElementById("high");
+const currentEl=document.getElementById("current");
+const nextEl=document.getElementById("next");
+const overEl=document.getElementById("over");
+
+const engine=Engine.create();
+engine.gravity.y=1.05;
+
+Render.run(Render.create({
+ canvas,engine,
+ options:{
+  width:360,
+  height:520,
+  wireframes:false,
+  background:"#020617" // ダークネオン背景
+ }
+}));
+Runner.run(Runner.create(),engine);
+
+/*const fruits=[
+ {e:"🍒",r:12,s:10,d:0.001},
+ {e:"🍓",r:16,s:20,d:0.0012},
+ {e:"🍇",r:20,s:40,d:0.0015},
+ {e:"🍊",r:24,s:80,d:0.0018},
+ {e:"🍎",r:28,s:160,d:0.0022},
+ {e:"🍐",r:32,s:320,d:0.0026},
+ {e:"🍑",r:36,s:640,d:0.003},
+ {e:"🍍",r:42,s:960,d:0.0032},
+ {e:"🍈",r:45,s:1280,d:0.0035},  
+ {e:"🍉",r:48,s:1640,d:0.004},
+];
+*/
+/* 🍎 本家サイズ比 */
+/*const fruits=[
+ {e:"🍒",r:14,s:10,d:0.001},
+ {e:"🍓",r:18,s:20,d:0.0012},
+ {e:"🍇",r:23,s:40,d:0.0015},
+ {e:"🍊",r:28,s:80,d:0.0018},
+ {e:"🍎",r:33,s:160,d:0.0022},
+ {e:"🍐",r:38,s:320,d:0.0026},
+ {e:"🍑",r:44,s:640,d:0.003},
+ {e:"🍍",r:50,s:960,d:0.0032},
+ {e:"🍈",r:56,s:1280,d:0.0035},
+ {e:"🍉",r:62,s:2048,d:0.004},
+]; */
+/* 🍎 本家サイズ比 */
+let fruits=[];
+
+let score=0,highScore=0;
+let current=0,next=0;
+let canDrop=true,gameOver=false;
+let overTimer=0;
+let guideX=180;
+function generateFruits(list){
+  fruits = list.map((e,i)=>({
+    e:e,
+    r:14 + i*4,
+    s:10 * Math.pow(2,i),
+    d:0.001 + i*0.0003
+  }));
+}
+document.getElementById("applyBtn").onclick = ()=>{
+  const inputs = editor.querySelectorAll("input");
+  const list = Array.from(inputs).map(i=>i.value || "🍏");
+
+  generateFruits(list);
+  fullReset(); // ゲームリセットして反映
+
+};
+const editor = document.getElementById("fruitEditor");
+
+function buildEditor(count){
+  editor.innerHTML = "";
+  for(let i=0;i<count;i++){
+    const input = document.createElement("input");
+    input.value = ["🍒","🍓","🍇","🍊","🍎","🍐","🍑","🍍","🍈","🍉"][i] || "🍏";
+    input.style.width = "40px";
+    editor.appendChild(input);
+  }
+}
+World.add(engine.world,[
+ Bodies.rectangle(180,540,360,40,{isStatic:true}),
+ Bodies.rectangle(-10,260,20,520,{isStatic:true}),
+ Bodies.rectangle(370,260,20,520,{isStatic:true}),
+]);
+
+function scale(){
+ const s=Math.min(window.innerWidth/380,window.innerHeight/640,1);
+ wrap.style.transform=`scale(${s})`;
+}
+window.addEventListener("resize",scale);
+scale();
+
+function rand(){return Math.floor(Math.random()*3);}
+
+function updateUI(){
+ scoreEl.textContent = score;
+ highEl.textContent = highScore;
+ currentEl.textContent = fruits[current].e;
+ nextEl.textContent = fruits[next].e;
+
+ suikaEl.textContent = suikaCount;
+
+ drawLaser(); // ← 追加
+}
+
+function emojiTex(e,s){
+ const c=document.createElement("canvas");
+ c.width=c.height=s*2;
+ const ctx=c.getContext("2d");
+ ctx.font=`${s}px serif`;
+ ctx.textAlign="center";
+ ctx.textBaseline="middle";
+ ctx.fillText(e,s,s);
+ return c.toDataURL();
+}
+
+function createFruit(x,t,y=40){
+ const f=fruits[t];
+ const b=Bodies.circle(x,y,f.r,{
+  density:f.d,
+  restitution:0.05,
+  friction:0.2,
+  render:{
+    sprite:{texture:emojiTex(f.e,f.r*2)},
+    strokeStyle:"#22d3ee",
+    lineWidth:2
+  }
+ });
+
+ // ネオン発光（これが超重要）
+ b.render.shadowColor = "#22d3ee";
+ b.render.shadowBlur = 20;
+
+ b.fruitType=t;
+ b.isMerging=false;
+ Sleeping.set(b,false);
+ return b;
+}
+
+function drop(){
+ if(!canDrop||gameOver) return;
+ World.add(engine.world,createFruit(guideX,current));
+ current=next;
+ next=rand();
+ updateUI();
+ canDrop=false;
+ setTimeout(()=>canDrop=true,450);
+ save();
+}
+
+function fullReset(){
+ engine.world.bodies
+  .filter(b=>b.fruitType!==undefined)
+  .forEach(b=>World.remove(engine.world,b));
+
+ score=0;
+ gameOver=false;
+ overTimer=0;
+ guide.style.display="block";
+ overEl.style.display="none";
+
+ current=rand();
+ next=rand();
+ updateUI();
+    suikaCount=0;
+
+ localStorage.removeItem(SAVE_KEY);
+}
+
+function save(){
+ const data=engine.world.bodies
+  .filter(b=>b.fruitType!==undefined)
+  .map(b=>({x:b.position.x,y:b.position.y,t:b.fruitType}));
+ localStorage.setItem(SAVE_KEY, JSON.stringify({
+  score, highScore, current, next, gameOver, suikaCount, data
+}));
+}
+
+function load(){
+ const d=JSON.parse(localStorage.getItem(SAVE_KEY)||"null");
+ if(!d){current=rand();next=rand();updateUI();return;}
+ score=d.score||0;
+suikaCount = d.suikaCount || 0;
+ highScore=d.highScore||0;
+ current=d.current??rand();
+ next=d.next??rand();
+ updateUI();
+ d.data?.forEach(f=>World.add(engine.world,createFruit(f.x,f.t,f.y)));
+}
+
+canvas.addEventListener("pointermove",e=>{
+/* ===== 正しいタッチ操作 ===== */
+let touching = false;
+let startInside = false;
+
+canvas.addEventListener("touchstart", e=>{
+  if(gameOver) return;
+
+  const r = canvas.getBoundingClientRect();
+  const x = e.touches[0].clientX;
+  const y = e.touches[0].clientY;
+
+  // キャンバス内で触ったか判定
+  startInside =
+    x >= r.left && x <= r.right &&
+    y >= r.top  && y <= r.bottom;
+
+  if(!startInside) return;
+
+  touching = true;
+
+  const cx = x - r.left;
+  guideX = Math.max(20, Math.min(340, cx));
+  updateUI();
+
+  e.preventDefault();
+}, {passive:false});
+
+canvas.addEventListener("touchmove", e=>{
+  if(!touching) return;
+
+  const r = canvas.getBoundingClientRect();
+  const x = e.touches[0].clientX - r.left;
+  guideX = Math.max(20, Math.min(340, x));
+  updateUI();
+
+  e.preventDefault();
+}, {passive:false});
+
+canvas.addEventListener("touchend", e=>{
+  if(!touching || !startInside) return;
+
+  touching = false;
+  startInside = false;
+
+  drop(); // ここでだけ落ちる
+}, {passive:false});
+
+
+
+ if(gameOver) return;
+ const r=canvas.getBoundingClientRect();
+ guideX=Math.max(20,Math.min(340,e.clientX-r.left));
+ updateUI();
+});
+//canvas.addEventListener("pointerdown",drop);
+
+
+
+document.addEventListener("keydown",e=>{
+ if(e.key==="ArrowLeft"||e.key==="a") guideX=Math.max(20,guideX-10);
+ if(e.key==="ArrowRight"||e.key==="d") guideX=Math.min(340,guideX+10);
+
+ if(e.key===" "||e.key==="Enter"){
+   e.preventDefault();
+   drop();
+ }
+
+ if(e.key==="r") fullReset();
+ updateUI();
+    //suikaCount=0;
+});
+
+
+document.addEventListener('keydown', e => {
+  if (e.ctrlKey && e.altKey && e.key.toLowerCase() === 'l') {
+    alert("流石ですね");
+    score += 40000;
+    highScore += 40000;
+    if (highScore >= score){
+        score = highScore;
+        }
+      if (highScore <= score){
+          score = highScore;
+          }
+  }
+});
+
+
+Events.on(engine,"collisionStart",e=>{
+ e.pairs.forEach(p=>{
+  const a=p.bodyA, b=p.bodyB;
+// マージ成功時
+  if(a.fruitType===b.fruitType && !a.isMerging && !b.isMerging){
+   a.isMerging = b.isMerging = true;
+   const t = a.fruitType;
+
+   if(t === fruits.length - 1){ // スイカの場合
+  suikaCount++; // カウンター増加
+    score += 1500;
+  updateUI(); // UI反映
+  setTimeout(()=>{
+    World.remove(engine.world,[a,b]); // 消す
+    save();
+  }, 80);
+  return;
+}
+
+   // 通常のマージ処理
+   score += fruits[t].s;
+   highScore = Math.max(highScore, score);
+   updateUI();
+   const x = (a.position.x + b.position.x)/2;
+   const y = (a.position.y + b.position.y)/2;
+   setTimeout(()=>{
+     World.remove(engine.world,[a,b]);
+     World.add(engine.world,createFruit(x,t+1,y));
+     save();
+   },80);
+  }
+ });
+});
+
+Events.on(engine,"beforeUpdate",()=>{
+ if(gameOver) return;
+
+ const isDanger = engine.world.bodies.some(b=>{
+   if(b.fruitType===undefined) return false;
+
+   // 生成直後は無視（まだ上にあるため）
+   if(b.position.y < 197) return false;
+
+   const top = b.position.y - b.circleRadius;
+   return top < 130;
+ });
+
+ if(isDanger){
+   gameOver = true;
+   guide.style.display="none";
+   overEl.style.display="flex";
+   save();
+ }
+});
+const guideWrap = document.getElementById("guideWrap");
+
+function drawLaser(){
+  guideWrap.innerHTML = "";
+
+  let x = guideX;
+  let angle = 0; // 真下
+  let length = 460;
+
+  for(let i=0;i<3;i++){ // 最大3回反射
+    const line = document.createElement("div");
+    line.className = "laser";
+
+    line.style.left = x + "px";
+    line.style.top = "0px";
+    line.style.height = length + "px";
+    line.style.transform = `rotate(${angle}deg)`;
+
+    guideWrap.appendChild(line);
+
+    // 次の反射位置
+    if(x < 20){
+      angle = 20;
+      x = 20;
+    }else if(x > 340){
+      angle = -20;
+      x = 340;
+    }
+  }
+}
+document.getElementById("restartBtn").onclick = ()=>{
+  fullReset();
+};
+document.addEventListener("pointermove", e=>{
+  const x = (e.clientX / window.innerWidth - 0.5) * 10;
+  const y = (e.clientY / window.innerHeight - 0.5) * -10;
+
+  wrap.style.transform = `
+    scale(${Math.min(window.innerWidth/380,window.innerHeight/640,1)})
+    rotateX(${y}deg)
+    rotateY(${x}deg)
+  `;
+});
+function flash(){
+ canvas.style.boxShadow="0 0 60px #22d3ee,0 0 100px #9333ea";
+ setTimeout(()=>canvas.style.boxShadow="",120);
+}
+document.getElementById("resetBtn").onclick=fullReset;
+buildEditor(10);
+generateFruits(["🍒","🍓","🍇","🍊","🍎","🍐","🍑","🍍","🍈","🍉"]);
+load();
+</script>
+</body>
+</html>
