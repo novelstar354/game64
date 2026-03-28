@@ -654,12 +654,13 @@ canvas{
   </div>
 
   <!-- 下段：操作 -->
-  <div class="topRow controlRow">
-    <div class="badge">🎮 <span id="current">🍒</span></div>
-    <div class="badge">➡ <span id="next">🍓</span></div>
-    <button id="resetBtn">🔄</button>
-    <button id="toggleUI">⚙</button>
-  </div>
+
+<div class="topRow controlRow">
+  <div class="badge">🎮 <span id="topCurrent">🍒</span></div>
+  <div class="badge">➡ <span id="topNext">🍓</span></div>
+  <button id="resetBtn">🔄</button>
+  <button id="toggleUI">⚙</button>
+</div>
 
 </div>
 <div id="uiPanel">
@@ -697,8 +698,8 @@ canvas{
   <div class="ui-block right-block">
    <!-- <div class="badge">🎮 <span id="current">🍒</span></div>
     <div class="badge">➡ <span id="next">🍓</span></div>-->
-<div class="badge">🎮 <span id="current">🍒</span></div>
-    <div class="badge">➡ <span id="next">🍓</span></div>
+<div class="badge">🎮 <span id="uiCurrent">🍒</span></div>
+    <div class="badge">➡ <span id="uiNext">🍓</span></div>
     <div class="row">
       <button id="resetBtn">🔄</button>
     </div>
@@ -846,18 +847,34 @@ function generateFruits(list){
     d:0.001 + i*0.0003
   }));
 }
+let tempFruitList = []; // 一時的にプリセットを保持する配列
+
+// プリセットボタン押下
+function applyPreset(name){
+  const list = PRESETS[name];
+  tempFruitList = [...list]; // 一時保存
+  buildEditor(list.length); // エディタ更新
+  editor.querySelectorAll("input").forEach((input,i)=>{
+    input.value = list[i];
+  });
+}
+
+// 「適用」ボタン押下で確定
 document.getElementById("applyBtn").onclick = ()=>{
   const inputs = editor.querySelectorAll("input");
   const list = Array.from(inputs).map(i=>i.value || "🍏");
 
+  // 新しい fruits 配列を生成
   generateFruits(list);
 
-  // ★ 保存
+  // 保存
   localStorage.setItem("fruitList", JSON.stringify(list));
 
-  // UI更新
+  // current と next をリセット
   current = 0;
   next = 1;
+
+  // topBar の表示を更新
   updateUI();
 };
 const editor = document.getElementById("fruitEditor");
@@ -887,14 +904,19 @@ scale();
 function rand(){return Math.floor(Math.random()*3);}
 
 function updateUI(){
- scoreEl.textContent = score;
- highEl.textContent = highScore;
- currentEl.textContent = fruits[current].e;
- nextEl.textContent = fruits[next].e;
+  scoreEl.textContent = score;
+  highEl.textContent = highScore;
+  suikaEl.textContent = suikaCount;
 
- suikaEl.textContent = suikaCount;
+  // トップバー
+  document.getElementById("topCurrent").textContent = fruits[current].e;
+  document.getElementById("topNext").textContent = fruits[next].e;
 
- drawLaser(); // ← 追加
+  // UIパネル
+  document.getElementById("uiCurrent").textContent = fruits[current].e;
+  document.getElementById("uiNext").textContent = fruits[next].e;
+
+  drawLaser(); // レーザー再描画
 }
 
 function emojiTex(e,s){
@@ -1178,28 +1200,7 @@ function drawLaser(){
     }
 }
 
-function applyPreset(name){
-  const list = PRESETS[name];
-  if(!list) return;
 
-  buildEditor(list.length);
-
-  const inputs = editor.querySelectorAll("input");
-  list.forEach((e,i)=>{
-    if(inputs[i]) inputs[i].value = e;
-  });
-
-  generateFruits(list);
-
-  // ★追加（プリセット名保存）
-  localStorage.setItem("fruitPreset", name);
-
-  localStorage.setItem("fruitList", JSON.stringify(list));
-
-  current = 0;
-  next = 1;
-  updateUI();
-}
 document.getElementById("restartBtn").onclick = ()=>{
   fullReset();
 };
