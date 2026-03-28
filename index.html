@@ -317,12 +317,40 @@ input{
   0 0 10px #22d3ee,
   0 0 25px #9333ea;
 }
+#ui button{
+  margin:2px;
+  padding:4px 6px;
+  border-radius:6px;
+  cursor:pointer;
+
+  background:rgba(0,255,255,0.08);
+  border:1px solid #22d3ee;
+  color:#67e8f9;
+
+  box-shadow:
+    0 0 8px #22d3ee,
+    inset 0 0 6px rgba(34,211,238,0.3);
+}
+
+#ui button:hover{
+  transform:scale(1.1);
+  box-shadow:
+    0 0 20px #22d3ee,
+    0 0 30px #9333ea;
+}
 </style>
 </head>
 <body>
 
 <div id="wrap">
  <div id="ui">
+     <div style="margin-top:4px;">
+  <button onclick="applyPreset('default')">🍒</button>
+  <button onclick="applyPreset('neon')">💎</button>
+  <button onclick="applyPreset('food')">🍩</button>
+  <button onclick="applyPreset('animal')">🐥</button>
+  <button onclick="applyPreset('chaos')">⚡</button>
+</div>
      <div style="margin:6px 0; font-size:12px;">
   種類数:
   <input id="fruitCount" type="number" min="3" max="15" value="10" style="width:50px;">
@@ -345,7 +373,6 @@ input{
  <div id="guideWrap"></div>
  <canvas id="world" width="360" height="520"></canvas>
  <div class="hint">← → / A D / Space / Enter / R<br>
- シンカの線：🍒→🍓→🍇→🍊→🍎→🍐→🍑→🍍→🍈→🍉
 </div>
 
 <div id="over" class="over" style="display:none">
@@ -356,6 +383,17 @@ input{
 </div>
 
 <script>
+const PRESETS = {
+  default: ["🍒","🍓","🍇","🍊","🍎","🍐","🍑","🍍","🍈","🍉"],
+
+  neon: ["🎁","⏳","🔔","💰","🪙","🏆","👑","🔮","💍","💎"],
+    
+  food: ["🍬","🍫","🍿","🧇","🍩","🍪","🥞","🍭","🍰","🎂"],
+
+  animal: ["🐣","🐥","🐤","🐦","🦆","🦉","🦅","🐧","🦜","🦚"],
+
+  chaos: ["💀","👁","🔥","⚡","🧠","👾","🌀","🌈","🧬","🪐"]
+};
 let suikaCount = 0; // スイカ専用カウンター
 const suikaEl = document.getElementById("suikaCount");
 const {Engine,Render,Runner,Bodies,World,Events,Sleeping}=Matter;
@@ -736,6 +774,30 @@ function drawLaser(){
       x = 340;
     }
   }
+}
+function applyPreset(name){
+  const list = PRESETS[name];
+  if(!list) return;
+
+  // 入力欄作り直し
+  buildEditor(list.length);
+
+  // 値セット
+  const inputs = editor.querySelectorAll("input");
+  list.forEach((e,i)=>{
+    if(inputs[i]) inputs[i].value = e;
+  });
+
+  // フルーツ生成
+  generateFruits(list);
+
+  // 保存
+  localStorage.setItem("fruitList", JSON.stringify(list));
+
+  // UI更新
+  current = 0;
+  next = 1;
+  updateUI();
 }
 document.getElementById("restartBtn").onclick = ()=>{
   fullReset();
