@@ -631,6 +631,12 @@ canvas{
  opacity:1;
  pointer-events:auto;
 }
+.laser.hidden {
+  display: none !important;
+}
+.hidden {
+  display: none !important;
+}
 </style>
 </head>
 <body>
@@ -781,13 +787,25 @@ const uiPanel = document.getElementById("uiPanel");
 
 let uiOpen = false;
 
-toggleBtn.onclick = ()=>{
+toggleBtn.onclick = () => {
   uiOpen = !uiOpen;
 
-  if(uiOpen){
+  if (uiOpen) {
     uiPanel.classList.add("open");
-  }else{
+    dim.classList.add("active");
+    document.getElementById("topBar").classList.add("hide");
+
+    // タブ開いたら既存レーザーを非表示
+    document.querySelectorAll(".laser").forEach(l => l.classList.add("hidden"));
+  } else {
     uiPanel.classList.remove("open");
+    dim.classList.remove("active");
+    document.getElementById("topBar").classList.remove("hide");
+
+    // タブ閉じたらレーザー再表示
+    document.querySelectorAll(".laser").forEach(l => l.classList.remove("hidden"));
+
+    drawLaser(); // レーザーを再描画
   }
 };
 document.addEventListener("pointerdown", e=>{
@@ -898,21 +916,22 @@ function createFruit(x,t,y=40){
  });
 const dim = document.getElementById("dim");
 
-toggleBtn.onclick = ()=>{
-  uiOpen = !uiOpen;
+toggleBtn.onclick = () => {
+    uiOpen = !uiOpen;
 
-  if(uiOpen){
-    uiPanel.classList.add("open");
-    dim.classList.add("active");
+    if (uiOpen) {
+        uiPanel.classList.add("open");
+        dim.classList.add("active");
+        document.getElementById("topBar").classList.add("hide");
 
-    document.getElementById("topBar").classList.add("hide"); // ←追加
+        drawLaser(); // ここでレーザー消去
+    } else {
+        uiPanel.classList.remove("open");
+        dim.classList.remove("active");
+        document.getElementById("topBar").classList.remove("hide");
 
-  }else{
-    uiPanel.classList.remove("open");
-    dim.classList.remove("active");
-
-    document.getElementById("topBar").classList.remove("hide"); // ←追加
-  }
+        drawLaser(); // ここでレーザー再描画
+    }
 };
  // ネオン発光（これが超重要）
  b.render.shadowColor = "#22d3ee";
@@ -1119,32 +1138,38 @@ Events.on(engine,"beforeUpdate",()=>{
 const guideWrap = document.getElementById("guideWrap");
 
 function drawLaser(){
-  guideWrap.innerHTML = "";
-
-  let x = guideX;
-  let angle = 0; // 真下
-  let length = 460;
-
-  for(let i=0;i<3;i++){ // 最大3回反射
-    const line = document.createElement("div");
-    line.className = "laser";
-
-    line.style.left = x + "px";
-    line.style.top = "0px";
-    line.style.height = length + "px";
-    line.style.transform = `rotate(${angle}deg)`;
-
-    guideWrap.appendChild(line);
-
-    // 次の反射位置
-    if(x < 20){
-      angle = 20;
-      x = 20;
-    }else if(x > 340){
-      angle = -20;
-      x = 340;
+    // タブが開いていたらレーザー描画を完全にスキップ
+    if (uiOpen) {
+        guideWrap.innerHTML = ""; // 古いレーザーを消す
+        return;
     }
-  }
+
+    guideWrap.innerHTML = "";
+
+    let x = guideX;
+    let angle = 0; // 真下
+    let length = 460;
+
+    for(let i=0;i<3;i++){ // 最大3回反射
+        const line = document.createElement("div");
+        line.className = "laser";
+
+        line.style.left = x + "px";
+        line.style.top = "0px";
+        line.style.height = length + "px";
+        line.style.transform = `rotate(${angle}deg)`;
+
+        guideWrap.appendChild(line);
+
+        // 次の反射位置
+        if(x < 20){
+            angle = 20;
+            x = 20;
+        }else if(x > 340){
+            angle = -20;
+            x = 340;
+        }
+    }
 }
 
 function applyPreset(name){
