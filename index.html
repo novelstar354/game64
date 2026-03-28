@@ -673,7 +673,8 @@ canvas{
       <button onclick="applyPreset('neon')">💎</button>
       <button onclick="applyPreset('food')">🍩</button>
       <button onclick="applyPreset('animal')">🐥</button>
-      <button onclick="applyPreset('chaos')">⚡</button>
+      <button onclick="applyPreset('drink')">🍹</button>
+      <button onclick="applyPreset('chaos')">⚡️</button>
     </div>
 
     <div class="row small">
@@ -694,9 +695,10 @@ canvas{
 
    <!--③ 操作 -->
   <div class="ui-block right-block">
-    <div class="badge">🎮 <span id="current">🍒</span></div>
+   <!-- <div class="badge">🎮 <span id="current">🍒</span></div>
+    <div class="badge">➡ <span id="next">🍓</span></div>-->
+<div class="badge">🎮 <span id="current">🍒</span></div>
     <div class="badge">➡ <span id="next">🍓</span></div>
-
     <div class="row">
       <button id="resetBtn">🔄</button>
     </div>
@@ -727,7 +729,9 @@ const PRESETS = {
 
   animal: ["🐣","🐥","🐤","🐦","🦆","🦉","🦅","🐧","🦜","🦚"],
 
-  chaos: ["💀","👁","🔥","⚡","🧠","👾","🌀","🌈","🧬","🪐"]
+  chaos: ["💀","👁","🔥","⚡","🧠","👾","🌀","🌈","🧬","🪐"],
+
+  drink: ["🧃","🍶","☕","🧋","🥃","🥂","🍷","🍸","🍹","🍾"]
 };
 let suikaCount = 0; // スイカ専用カウンター
 const suikaEl = document.getElementById("suikaCount");
