@@ -552,7 +552,10 @@ canvas{
 }
 .scoreRow{
  justify-content:center;
+ gap:8px;
 }
+
+
 #toggleUI{
  margin-left:auto;
 }
@@ -648,9 +651,9 @@ canvas{
 
   <!-- 上段：スコア -->
   <div class="topRow scoreRow">
-    <span>Score: <b id="score">0</b></span>
-    <span>High: <b id="high">0</b></span>
-    <span>Suika: <b id="suikaCount">0</b></span>
+    <span>Score: <b id="score">0 </b></span>
+    <span>High: <b id="high">0 </b></span>
+    <span>Suika: <b id="suikaCount">0 </b></span>
   </div>
 
   <!-- 下段：操作 -->
@@ -688,10 +691,10 @@ canvas{
   </div>
 
   <!-- ② スコア -->
-  <div class="ui-block score-block">
-    <div>Score<br><span id="score">0</span></div>
-    <div>High<br><span id="high">0</span></div>
-    <div>Suika<br><span id="suikaCount">0</span></div>
+  <div class="ui-block score-block" style="gap:5px;">
+    <div>Score<br><span id="uiScore">0  </span></div>
+    <div>High<br><span id="uiHigh">0  </span></div>
+    <div>Suika<br><span id="uiSuikaCount">0  </span></div>
   </div>
 
    <!--③ 操作 -->
@@ -915,7 +918,9 @@ function updateUI(){
   // UIパネル
   document.getElementById("uiCurrent").textContent = fruits[current].e;
   document.getElementById("uiNext").textContent = fruits[next].e;
-
+  document.getElementById("uiScore").textContent = score;
+  document.getElementById("uiHigh").textContent = highScore;
+  document.getElementById("uiSuikaCount").textContent = suikaCount;
   drawLaser(); // レーザー再描画
 }
 
