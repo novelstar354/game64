@@ -677,6 +677,7 @@ canvas{
       <button onclick="applyPreset('neon')">💎</button>
       <button onclick="applyPreset('food')">🍩</button>
       <button onclick="applyPreset('animal')">🐥</button>
+      <button onclick="applyPreset('game')">🧩</button>
       <button onclick="applyPreset('face')">🤪</button>
       <button onclick="applyPreset('drink')">🍹</button>
       <button onclick="applyPreset('chaos')">⚡️</button>
@@ -705,7 +706,7 @@ canvas{
 <div class="badge">🎮 <span id="uiCurrent">🍒</span></div>
     <div class="badge">➡ <span id="uiNext">🍓</span></div>
     <div class="row">
-      <button id="resetBtn">🔄</button>
+      <button id="uiResetBtn">🔄</button>
     </div>
   </div>
 
@@ -739,16 +740,21 @@ const PRESETS = {
   drink: ["🧃","🍶","☕","🧋","🥃","🥂","🍷","🍸","🍹","🍾"],
   
   face:
-["🫥","😶‍🌫","🥱","🥳","🙄","🤬","🤔","🤑","🤯","🤪"]
+["🫥","😶‍🌫","🥱","🥳","🙄","🤬","🤔","🤑","🤯","🤪"],
+
+  game:
+["🧩","🎮","🕹","🎲","🀄","🃏","🎱","💣","⚔","👾"]
 };
 let suikaCount = 0; // スイカ専用カウンター
+let activeFruitList = [];   // ← 実際に使われる（確定）
+let tempFruitList = [];     // ← プレビュー用
 const suikaEl = document.getElementById("suikaCount");
 const {Engine,Render,Runner,Bodies,World,Events,Sleeping}=Matter;
 const SAVE_KEY="suika1";
 
 const canvas=document.getElementById("world");
 const wrap=document.getElementById("wrap");
-const guide = null;
+const guide = document.getElementById("guideWrap");
 const scoreEl=document.getElementById("score");
 const highEl=document.getElementById("high");
 const currentEl=document.getElementById("current");
@@ -847,6 +853,7 @@ let canDrop=true,gameOver=false;
 let overTimer=0;
 let guideX=180;
 function generateFruits(list){
+  activeFruitList = [...list]; // ← 確定用に保存
   fruits = list.map((e,i)=>({
     e:e,
     r:14 + i*4,
@@ -854,13 +861,15 @@ function generateFruits(list){
     d:0.001 + i*0.0003
   }));
 }
-let tempFruitList = []; // 一時的にプリセットを保持する配列
+//let tempFruitList = []; // 一時的にプリセットを保持する配列
 
 // プリセットボタン押下
 function applyPreset(name){
   const list = PRESETS[name];
-  tempFruitList = [...list]; // 一時保存
-  buildEditor(list.length); // エディタ更新
+
+  tempFruitList = [...list]; // ← 一時保存だけ
+
+  buildEditor(list.length);
   editor.querySelectorAll("input").forEach((input,i)=>{
     input.value = list[i];
   });
@@ -871,17 +880,17 @@ document.getElementById("applyBtn").onclick = ()=>{
   const inputs = editor.querySelectorAll("input");
   const list = Array.from(inputs).map(i=>i.value || "🍏");
 
-  // 新しい fruits 配列を生成
   generateFruits(list);
 
-  // 保存
+  // ★ 保存（ここだけ）
   localStorage.setItem("fruitList", JSON.stringify(list));
 
-  // current と next をリセット
+  // ★ current / next を保存用に固定
   current = 0;
   next = 1;
 
-  // topBar の表示を更新
+  save(); // ← これ追加（重要）
+
   updateUI();
 };
 const editor = document.getElementById("fruitEditor");
@@ -1023,7 +1032,12 @@ function save(){
 
 function load(){
  const d=JSON.parse(localStorage.getItem(SAVE_KEY)||"null");
- if(!d){current=rand();next=rand();updateUI();return;}
+ if(!d){
+  current = 0;
+  next = 1;
+  updateUI();
+  return;
+}
  score=d.score||0;
 suikaCount = d.suikaCount || 0;
  highScore=d.highScore||0;
@@ -1229,7 +1243,8 @@ function flash(){
  setTimeout(()=>canvas.style.boxShadow="",120);
 }
 document.getElementById("resetBtn").onclick=fullReset;
-const savedList = JSON.parse(localStorage.getItem("fruitList") || "null");
+document.getElementById("uiResetBtn").onclick=fullReset;
+/*const savedList = JSON.parse(localStorage.getItem("fruitList") || "null");
 
 if(savedList){
   buildEditor(savedList.length);
@@ -1255,7 +1270,7 @@ if(savedPreset && PRESETS[savedPreset]){
   if(savedList){
     buildEditor(savedList.length);
     const inputs = editor.querySelectorAll("input");
-    savedList.forEach((e,i)=>{
+    save1dList.forEach((e,i)=>{
       if(inputs[i]) inputs[i].value = e;
     });
     generateFruits(savedList);
@@ -1263,6 +1278,21 @@ if(savedPreset && PRESETS[savedPreset]){
     buildEditor(10);
     generateFruits(["🍒","🍓","🍇","🍊","🍎","🍐","🍑","🍍","🍈","🍉"]);
   }
+}*/
+const savedList = JSON.parse(localStorage.getItem("fruitList") || "null");
+
+if(savedList){
+  buildEditor(savedList.length);
+
+  const inputs = editor.querySelectorAll("input");
+  savedList.forEach((e,i)=>{
+    if(inputs[i]) inputs[i].value = e;
+  });
+
+  generateFruits(savedList); // ←ここで確定
+}else{
+  buildEditor(10);
+  generateFruits(["🍒","🍓","🍇","🍊","🍎","🍐","🍑","🍍","🍈","🍉"]);
 }
 load();
 </script>
